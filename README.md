@@ -49,8 +49,8 @@ da conta).
 
 ## Trade-off: autorização de cartão de crédito
 
-O fluxo de escrita aqui é assíncrono (event-driven) — o mesmo padrão usado
-para PIX. Isso é adequado quando até alguns segundos de defasagem no saldo
+O fluxo de escrita aqui é assíncrono (event-driven) — 
+Isso é adequado quando até alguns segundos de defasagem no saldo
 são toleráveis. Autorização de cartão em produção geralmente exige uma
 checagem **síncrona** de limite antes de aprovar a compra (não dá para
 autorizar e só depois descobrir que não havia saldo).
