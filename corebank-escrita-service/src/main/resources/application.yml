@@ -1,0 +1,27 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: corebank-escrita-service
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all                      # durabilidade: só confirma depois que todas as réplicas gravaram
+      properties:
+        enable.idempotence: true     # evita mensagem duplicada em caso de retry do producer
+        max.in.flight.requests.per.connection: 5
+        retries: 5
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics
+
+logging:
+  level:
+    com.corebank.escrita: INFO

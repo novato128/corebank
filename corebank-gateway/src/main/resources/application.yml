@@ -1,0 +1,99 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: corebank-gateway
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+  cloud:
+    gateway:
+      routes:
+        # 90% do tráfego esperado (~1800 req/s de um total de 2000 req/s)
+        - id: saldo-route
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/contas/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 1800
+                redis-rate-limiter.burstCapacity: 2200
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@contaKeyResolver}"
+            - name: CircuitBreaker
+              args:
+                name: saldoCB
+                fallbackUri: forward:/fallback/saldo
+
+        # PIX: parte dos 10% de escrita (~200 req/s no total)
+        - id: pix-route
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/pix/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 120
+                redis-rate-limiter.burstCapacity: 200
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@contaKeyResolver}"
+            - name: CircuitBreaker
+              args:
+                name: escritaCB
+                fallbackUri: forward:/fallback/escrita
+
+        # Pagamento com cartão: restante dos 10% de escrita
+        - id: cartao-route
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/pagamentos-cartao/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 80
+                redis-rate-limiter.burstCapacity: 150
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@contaKeyResolver}"
+            - name: CircuitBreaker
+              args:
+                name: escritaCB
+                fallbackUri: forward:/fallback/escrita
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      saldoCB:
+        sliding-window-size: 20
+        minimum-number-of-calls: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+      escritaCB:
+        sliding-window-size: 20
+        minimum-number-of-calls: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 15s
+  timelimiter:
+    instances:
+      saldoCB:
+        timeout-duration: 3s
+      escritaCB:
+        timeout-duration: 5s
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,gateway,circuitbreakers
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.corebank.gateway: INFO
+    org.springframework.cloud.gateway: INFO

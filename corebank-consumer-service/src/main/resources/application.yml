@@ -1,0 +1,81 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: corebank-consumer-service
+
+  datasource:
+    url: jdbc:postgresql://localhost:5433/corebank
+    username: corebank
+    password: corebank
+    hikari:
+      maximum-pool-size: 10          # pool pequeno de propósito: o banco já está no limite
+      minimum-idle: 2
+      connection-timeout: 3000
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          batch_size: 50             # habilita batch insert real no saveAll()
+        order_inserts: true
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: transacao-persistencia-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: com.corebank.consumer.messaging
+        spring.json.use.type.headers: false   # ignora o header de tipo (classe do producer) e usa sempre a classe local abaixo
+        spring.json.value.default.type: com.corebank.consumer.messaging.TransacaoEvent
+        max.poll.records: 100        # tamanho do lote consumido por vez
+    listener:
+      type: batch
+      ack-mode: manual_immediate     # só confirma o offset depois que o lote foi persistido
+    producer:
+      # usado só pelo DeadLetterPublishingRecoverer para reenviar ao tópico .DLT
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      bancoEscrita:
+        sliding-window-size: 20
+        minimum-number-of-calls: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 15s
+        permitted-number-of-calls-in-half-open-state: 5
+  retry:
+    instances:
+      bancoEscrita:
+        max-attempts: 3
+        wait-duration: 500ms
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+        retry-exceptions:
+          - org.springframework.dao.DataAccessException
+          - org.springframework.dao.TransientDataAccessException
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,circuitbreakers
+  endpoint:
+    health:
+      show-details: always
+  health:
+    circuitbreakers:
+      enabled: true
+
+logging:
+  level:
+    com.corebank.consumer: INFO
+    org.springframework.kafka: WARN

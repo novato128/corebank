@@ -1,0 +1,74 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: corebank-saldo-service
+
+  datasource:
+    url: jdbc:postgresql://localhost:5433/corebank
+    username: corebank
+    password: corebank
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 3000
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 2000ms
+  cache:
+    type: redis
+    redis:
+      time-to-live: 5000       # saldo pode ter até 5s de defasagem (requisito de negócio)
+      cache-null-values: false
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: saldo-cache-invalidation
+      auto-offset-reset: latest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: com.corebank.saldo.messaging
+        spring.json.use.type.headers: false
+        spring.json.value.default.type: com.corebank.saldo.messaging.TransacaoConcluidaEvent
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      bancoSaldo:
+        sliding-window-size: 20
+        minimum-number-of-calls: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 5
+        ignore-exceptions:
+          - com.corebank.saldo.exception.ContaNaoEncontradaException
+  bulkhead:
+    instances:
+      bancoSaldo:
+        max-concurrent-calls: 50
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,circuitbreakers
+  endpoint:
+    health:
+      show-details: always
+  health:
+    circuitbreakers:
+      enabled: true
+
+logging:
+  level:
+    com.corebank.saldo: INFO
