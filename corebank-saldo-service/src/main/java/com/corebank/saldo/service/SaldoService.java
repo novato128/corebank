@@ -12,11 +12,6 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
-/**
- * O rate limiting da entrada fica no corebank-gateway. Aqui só protegemos
- * o banco: cache-aside no Redis (TTL 5s) e, em cache miss, circuit breaker
- * + bulkhead ao redor da chamada ao Postgres.
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j

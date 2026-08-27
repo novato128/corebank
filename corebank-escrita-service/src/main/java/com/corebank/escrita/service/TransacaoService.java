@@ -12,19 +12,6 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.UUID;
 
-/**
- * Nunca escreve direto no banco: publica o evento no Kafka (acks=all
- * garante durabilidade) e responde. O TransacaoConsumer é quem persiste,
- * em lote, no ritmo que o Postgres aguenta.
- *
- * IMPORTANTE: este fluxo assíncrono cobre bem o PIX, onde até 5s de
- * defasagem no saldo são aceitáveis. Autorização de cartão de crédito em
- * produção normalmente exige uma checagem SÍNCRONA de saldo/limite antes
- * de aprovar (não pode autorizar e descobrir depois que não havia saldo).
- * Se precisar disso, o padrão é validar o limite via uma operação atômica
- * em Redis (script Lua) antes de publicar o evento — posso implementar
- * isso separadamente se fizer sentido para o seu caso.
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j

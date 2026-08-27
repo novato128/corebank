@@ -8,11 +8,6 @@ import reactor.core.publisher.Mono;
 @Configuration
 public class RateLimiterConfig {
 
-    /**
-     * Cada conta tem seu próprio "balde" de tokens: um cliente sozinho
-     * fazendo muita requisição não consome o limite de outro. Se o
-     * cabeçalho X-Conta-Id não vier (ex: chamada anônima), cai para o IP.
-     */
     @Bean
     public KeyResolver contaKeyResolver() {
         return exchange -> {

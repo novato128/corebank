@@ -9,11 +9,6 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.Instant;
 import java.util.Map;
 
-/**
- * Chamado pelo filtro CircuitBreaker do Gateway quando o serviço de
- * trás está fora do ar ou o circuito está aberto. Responde rápido em
- * vez de deixar o cliente esperando um timeout longo.
- */
 @RestController
 @RequestMapping("/fallback")
 public class FallbackController {
