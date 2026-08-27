@@ -31,7 +31,7 @@ da conta).
    cd corebank-consumer-service && ./mvnw spring-boot:run
    ```
 
-3. Teste pelo gateway (nunca chame os serviços de trás direto em produção):
+3. Teste pelo gateway:
    ```bash
    # consulta de saldo
    curl http://localhost:8080/api/contas/1/saldo
@@ -47,7 +47,7 @@ da conta).
      -d '{"contaId": 1, "cartaoId": "1234-5678", "estabelecimento": "Mercado XPTO", "valor": 89.90}'
    ```
 
-## Ponto de atenção: autorização de cartão de crédito
+## Trade-off: autorização de cartão de crédito
 
 O fluxo de escrita aqui é assíncrono (event-driven) — o mesmo padrão usado
 para PIX. Isso é adequado quando até alguns segundos de defasagem no saldo
